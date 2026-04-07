@@ -1,0 +1,31 @@
+Q3 Product Launch — "Payments 2.0"
+
+We need to ship the new payments feature by end of September. Here's everything swirling in my head:
+
+Context: Finance flagged that our current checkout flow is losing ~18% of users at the payment step. Payments 2.0 adds one-click checkout, Apple Pay, and a redesigned summary screen. Engineering says backend is ready — it's all frontend and GTM now.
+
+Key decisions already made:
+- We're going with Stripe for the payment processor (not Adyen — too slow to integrate)
+- Soft launch to SEA region first, then global rollout in Q4
+- No feature flags — full cutover on launch day
+
+What needs to happen:
+- Landing page redesign (Marcus owns this, needs to be done by Aug 22)
+- Email drip campaign — 3 emails: announcement, reminder, go-live (Sarah from marketing, starts Aug 28)
+- In-app banner + push notification for existing users (mobile team)
+- Help centre articles updated before launch (Jenny)
+- Finance sign-off on pricing page copy (urgent — blocking legal)
+- Load testing at 10x traffic before go-live (DevOps, needs staging environment ready first)
+- Staging environment setup (DevOps, Aug 14)
+- A/B test plan for the new summary screen (growth team)
+- Stakeholder demo to leadership — show the end-to-end flow
+
+Still open:
+- Do we offer a launch discount? (CMO hasn't decided)
+- Apple Pay approval timeline from App Store — could slip
+- Whether to announce at the Sep 5 all-hands or keep quiet until live
+
+People involved: marcus@company.com, sarah@company.com, jenny@company.com, devops@company.com, cmo@company.com
+
+Kick-off: next Monday 10am SGT, get everyone aligned.
+Leadership review: two weeks after kick-off.

@@ -1,0 +1,50 @@
+steps:
+  # 1. Build container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - -t
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/genesis-api:${SHORT_SHA}'
+      - .
+
+  # 2. Push to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/genesis-api:${SHORT_SHA}'
+
+  # 3. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - genesis-api
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/genesis-api:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+      - --service-account=${_SA_EMAIL}
+      - --set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION}
+      - --set-secrets=DB_PASSWORD=genesis-db-password:latest,DB_USER=genesis-db-user:latest,LINEAR_API_KEY=genesis-linear-key:latest
+      - --set-env-vars=ALLOYDB_INSTANCE_URI=${_ALLOYDB_INSTANCE_URI},DB_NAME=genesis
+      - --set-env-vars=LINEAR_TEAM_ID=${_LINEAR_TEAM_ID}
+      - --set-env-vars=MCP_TOOLBOX_URL=${_MCP_TOOLBOX_URL}
+      - --set-env-vars=SESSION_DB_URL=${_SESSION_DB_URL}
+      - --min-instances=1
+      - --max-instances=10
+      - --allow-unauthenticated
+
+substitutions:
+  _REGION: us-central1
+  _REPO: genesis
+  _SA_EMAIL: genesis-sa@${PROJECT_ID}.iam.gserviceaccount.com
+  _ALLOYDB_INSTANCE_URI: ''   # set in trigger
+  _MCP_TOOLBOX_URL: ''        # set in trigger
+  _SESSION_DB_URL: ''         # postgresql+asyncpg://... for AlloyDB session storage
+  _LINEAR_TEAM_ID: ''         # from linear.app/<workspace>/settings
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/genesis-api:${SHORT_SHA}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
