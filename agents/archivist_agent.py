@@ -8,10 +8,10 @@ import os
 from google.adk.agents import Agent
 from google.adk.tools.mcp_tool import McpToolset, SseConnectionParams
 
-MCP_URL = os.getenv("MCP_TOOLBOX_URL", "http://localhost:5000/sse")
+MCP_URL = os.getenv("MCP_TOOLBOX_URL", "http://localhost:5000/mcp/sse")
 
 archivist_agent = Agent(
-    model="gemini-2.0-flash-001",
+    model="gemini-2.5-flash",
     name="archivist_agent",
     description=(
         "Creates a structured Google Doc from an ExtractedPlan. "

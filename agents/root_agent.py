@@ -17,14 +17,14 @@ from .dispatcher_agent import dispatcher_agent
 from .timekeeper_agent import timekeeper_agent
 from .schemas import ExtractedPlan
 
-MCP_URL = os.getenv("MCP_TOOLBOX_URL", "http://localhost:5000/sse")
+MCP_URL = os.getenv("MCP_TOOLBOX_URL", "http://localhost:5000/mcp/sse")
 
 # ── Planner sub-agent ─────────────────────────────────────────────────────────
 # Separate agent with output_schema so structured extraction works.
 # ADK constraint: agents with output_schema cannot use tools or sub-agents.
 
 planner_agent = Agent(
-    model="gemini-2.5-pro-preview-05-06",
+    model="gemini-2.5-flash",
     name="planner_agent",
     description="Extracts a structured ExtractedPlan from a raw brain-dump.",
     instruction="""
@@ -41,7 +41,7 @@ Open Questions, Next Steps.
 # ── Root agent ────────────────────────────────────────────────────────────────
 
 root_agent = Agent(
-    model="gemini-2.5-pro-preview-05-06",
+    model="gemini-2.5-flash",
     name="genesis_root",
     description="Genesis Project Architect — turns a brain-dump into a live project.",
     instruction="""
