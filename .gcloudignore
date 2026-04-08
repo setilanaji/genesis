@@ -1,0 +1,8 @@
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+
+# Never upload credentials to Cloud Build
+*-key.json
+sa-key.json

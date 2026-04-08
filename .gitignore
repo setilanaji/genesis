@@ -1,4 +1,6 @@
 .env
+*-key.json
+sa-key.json
 __pycache__/
 *.pyc
 *.pyo
