@@ -14,7 +14,7 @@ LINEAR_API_KEY = os.getenv("LINEAR_API_KEY", "")
 LINEAR_TEAM_ID = os.getenv("LINEAR_TEAM_ID", "")
 
 dispatcher_agent = Agent(
-    model="gemini-2.0-flash-001",
+    model="gemini-2.5-flash",
     name="dispatcher_agent",
     description=(
         "Creates a Linear project with issues from an ExtractedPlan. "

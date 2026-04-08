@@ -6,9 +6,10 @@ Run:  uv run uvicorn mcp.google_tools_server:app --port 8001
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import google.auth
 import googleapiclient.discovery
@@ -47,7 +48,8 @@ class CreateDocRequest(BaseModel):
 
 
 @app.post("/docs/create")
-def create_doc(req: CreateDocRequest) -> dict:
+async def create_doc(request: Request) -> dict:
+    req = CreateDocRequest(**json.loads(await request.body()))
     docs = _docs_service()
     doc = docs.documents().create(body={"title": req.title}).execute()
     doc_id = doc["documentId"]
@@ -69,7 +71,8 @@ class DeleteDocRequest(BaseModel):
 
 
 @app.post("/docs/delete")
-def delete_doc(req: DeleteDocRequest) -> dict:
+async def delete_doc(request: Request) -> dict:
+    req = DeleteDocRequest(**json.loads(await request.body()))
     _drive_service().files().delete(fileId=req.doc_id).execute()
     return {"deleted": req.doc_id}
 
@@ -81,11 +84,17 @@ class CreateEventRequest(BaseModel):
     start: str
     end: str
     description: str | None = None
-    attendees: list[str] = []
+    attendees: str | list[str] = ""
+
+    def attendees_list(self) -> list[str]:
+        if isinstance(self.attendees, list):
+            return self.attendees
+        return [e.strip() for e in self.attendees.split(",") if e.strip()]
 
 
 @app.post("/calendar/create")
-def create_event(req: CreateEventRequest) -> dict:
+async def create_event(request: Request) -> dict:
+    req = CreateEventRequest(**json.loads(await request.body()))
     svc = _calendar_service()
     body: dict[str, Any] = {
         "summary": req.title,
@@ -94,8 +103,9 @@ def create_event(req: CreateEventRequest) -> dict:
     }
     if req.description:
         body["description"] = req.description
-    if req.attendees:
-        body["attendees"] = [{"email": e} for e in req.attendees]
+    attendees = req.attendees_list()
+    if attendees:
+        body["attendees"] = [{"email": e} for e in attendees]
 
     event = svc.events().insert(calendarId="primary", body=body).execute()
     return {"event_id": event["id"], "url": event.get("htmlLink", "")}
@@ -106,8 +116,10 @@ class DeleteEventRequest(BaseModel):
 
 
 @app.post("/calendar/delete")
-def delete_event(req: DeleteEventRequest) -> dict:
+async def delete_event(request: Request) -> dict:
+    req = DeleteEventRequest(**json.loads(await request.body()))
     _calendar_service().events().delete(
         calendarId="primary", eventId=req.event_id
     ).execute()
     return {"deleted": req.event_id}
+ 

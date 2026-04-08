@@ -90,7 +90,7 @@ gcloud auth application-default login
 ### 3. Configure environment
 
 ```bash
-cp .env.example .env
+cp .env.example .env69.
 # Edit .env — set GOOGLE_CLOUD_PROJECT, DB credentials
 ```
 

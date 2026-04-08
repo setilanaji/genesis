@@ -23,8 +23,8 @@ _session_db_url = os.getenv(
 )
 
 app = get_fast_api_app(
-    agent_dir=_agent_dir,
-    session_db_url=_session_db_url,
+    agents_dir=_agent_dir,
+    session_service_uri=_session_db_url,
     allow_origins=["*"],
     web=True,  # mounts the ADK web UI at /
 )
