@@ -14,6 +14,9 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import google.auth
+import google.oauth2.credentials
+import google.oauth2.service_account
+from google.auth.transport.requests import Request
 import googleapiclient.discovery
 import googleapiclient.errors
 
@@ -22,28 +25,58 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Genesis Google Tools Server")
 
-SCOPES = [
+DRIVE_SCOPES = [
     "https://www.googleapis.com/auth/documents",
-    "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/drive.file",
+]
+CALENDAR_SCOPES = [
+    "https://www.googleapis.com/auth/calendar",
 ]
 
 
-def _creds():
-    creds, _ = google.auth.default(scopes=SCOPES)
+def _personal_creds():
+    """Load personal user credentials from ADC file — uses personal Drive quota."""
+    adc_path = os.path.expanduser("~/.config/gcloud/application_default_credentials.json")
+    try:
+        with open(adc_path) as f:
+            info = json.load(f)
+        creds = google.oauth2.credentials.Credentials(
+            token=None,
+            refresh_token=info["refresh_token"],
+            client_id=info["client_id"],
+            client_secret=info["client_secret"],
+            token_uri="https://oauth2.googleapis.com/token",
+            scopes=DRIVE_SCOPES,
+        )
+        creds.refresh(Request())
+        return creds
+    except Exception as e:
+        logger.warning("Personal ADC not found, falling back to default: %s", e)
+        creds, _ = google.auth.default(scopes=DRIVE_SCOPES)
+        return creds
+
+
+def _sa_creds():
+    """Load SA credentials for Calendar."""
+    sa_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    if sa_path and os.path.exists(sa_path):
+        return google.oauth2.service_account.Credentials.from_service_account_file(
+            sa_path, scopes=CALENDAR_SCOPES
+        )
+    creds, _ = google.auth.default(scopes=CALENDAR_SCOPES)
     return creds
 
 
 def _docs_service():
-    return googleapiclient.discovery.build("docs", "v1", credentials=_creds())
+    return googleapiclient.discovery.build("docs", "v1", credentials=_personal_creds())
 
 
 def _drive_service():
-    return googleapiclient.discovery.build("drive", "v3", credentials=_creds())
+    return googleapiclient.discovery.build("drive", "v3", credentials=_personal_creds())
 
 
 def _calendar_service():
-    return googleapiclient.discovery.build("calendar", "v3", credentials=_creds())
+    return googleapiclient.discovery.build("calendar", "v3", credentials=_sa_creds())
 
 
 # ── Docs ──────────────────────────────────────────────────────────────────────

@@ -25,13 +25,16 @@ steps:
       - --platform=managed
       - --service-account=${_SA_EMAIL}
       - --set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION}
-      - --set-secrets=DB_PASSWORD=genesis-db-password:latest,DB_USER=genesis-db-user:latest,LINEAR_API_KEY=genesis-linear-key:latest
+      - --set-env-vars=GOOGLE_GENAI_USE_VERTEXAI=false
+      - --set-env-vars=GOOGLE_CALENDAR_ID=${_GOOGLE_CALENDAR_ID}
+      - --set-env-vars=GOOGLE_DRIVE_FOLDER_ID=${_GOOGLE_DRIVE_FOLDER_ID}
+      - --set-secrets=DB_PASSWORD=genesis-db-password:latest,DB_USER=genesis-db-user:latest,LINEAR_API_KEY=genesis-linear-key:latest,GOOGLE_API_KEY=genesis-google-api-key:latest
       - --set-env-vars=ALLOYDB_INSTANCE_URI=${_ALLOYDB_INSTANCE_URI},DB_NAME=genesis
       - --set-env-vars=LINEAR_TEAM_ID=${_LINEAR_TEAM_ID}
       - --set-env-vars=MCP_TOOLBOX_URL=${_MCP_TOOLBOX_URL}
-      - --set-env-vars=SESSION_DB_URL=${_SESSION_DB_URL}
       - --min-instances=1
       - --max-instances=10
+      - --timeout=3600
       - --allow-unauthenticated
 
 substitutions:
@@ -39,9 +42,10 @@ substitutions:
   _REPO: genesis
   _SA_EMAIL: genesis-sa@${PROJECT_ID}.iam.gserviceaccount.com
   _ALLOYDB_INSTANCE_URI: ''   # set in trigger
-  _MCP_TOOLBOX_URL: ''        # set in trigger
-  _SESSION_DB_URL: ''         # postgresql+asyncpg://... for AlloyDB session storage
+  _MCP_TOOLBOX_URL: 'http://localhost:5000/mcp'  # Toolbox runs in same container via start.sh
   _LINEAR_TEAM_ID: ''         # from linear.app/<workspace>/settings
+  _GOOGLE_CALENDAR_ID: 'primary'
+  _GOOGLE_DRIVE_FOLDER_ID: ''
 
 images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/genesis-api:${SHORT_SHA}'
