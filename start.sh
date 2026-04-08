@@ -33,7 +33,7 @@ sleep 1
 
 # 2. MCP Toolbox (proxies to Google Tools Server)
 echo "Starting MCP Toolbox on :5000..."
-toolbox --tools-file "tools_server/tools.yaml" --port 5000 --ui \
+toolbox --tools-file "tools_server/tools.yaml" --port 5000 --enable-api --ui \
   > /tmp/genesis-toolbox.log 2>&1 &
 PIDS+=($!)
 

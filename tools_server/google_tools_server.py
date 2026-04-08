@@ -7,12 +7,18 @@ Run:  uv run uvicorn mcp.google_tools_server:app --port 8001
 from __future__ import annotations
 
 import json
+import logging
+import os
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import google.auth
 import googleapiclient.discovery
+import googleapiclient.errors
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Genesis Google Tools Server")
 
@@ -49,21 +55,47 @@ class CreateDocRequest(BaseModel):
 
 @app.post("/docs/create")
 async def create_doc(request: Request) -> dict:
-    req = CreateDocRequest(**json.loads(await request.body()))
-    docs = _docs_service()
-    doc = docs.documents().create(body={"title": req.title}).execute()
-    doc_id = doc["documentId"]
-    url = f"https://docs.google.com/document/d/{doc_id}/edit"
+    try:
+        raw = await request.body()
+        logger.info("create_doc raw body: %s", raw[:200])
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            # MCP Toolbox doesn't JSON-escape template values; re-encode safely
+            import re
+            text = raw.decode("utf-8", errors="replace")
+            title = re.search(r'"title"\s*:\s*"(.*?)",\s*"body"', text, re.DOTALL)
+            body = re.search(r'"body"\s*:\s*"(.*?)"\s*\}?\s*$', text, re.DOTALL)
+            data = {
+                "title": title.group(1) if title else "Untitled",
+                "body": body.group(1).replace("\\n", "\n") if body else "",
+            }
+        req = CreateDocRequest(**data)
+        drive = _drive_service()
+        folder_id = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
+        file_meta: dict = {"name": req.title, "mimeType": "application/vnd.google-apps.document"}
+        if folder_id:
+            file_meta["parents"] = [folder_id]
+        doc_file = drive.files().create(body=file_meta, fields="id").execute()
+        doc_id = doc_file["id"]
+        url = f"https://docs.google.com/document/d/{doc_id}/edit"
+        docs = _docs_service()
 
-    docs.documents().batchUpdate(
-        documentId=doc_id,
-        body={
-            "requests": [
-                {"insertText": {"location": {"index": 1}, "text": req.body}}
-            ]
-        },
-    ).execute()
-    return {"doc_id": doc_id, "url": url}
+        docs.documents().batchUpdate(
+            documentId=doc_id,
+            body={
+                "requests": [
+                    {"insertText": {"location": {"index": 1}, "text": req.body}}
+                ]
+            },
+        ).execute()
+        return {"doc_id": doc_id, "url": url}
+    except googleapiclient.errors.HttpError as e:
+        logger.error("Google Docs API error: %s", e)
+        return {"error": f"Google Docs API error: {e}", "doc_id": None, "url": None}
+    except Exception as e:
+        logger.exception("Unexpected error in create_doc")
+        return {"error": str(e), "doc_id": None, "url": None}
 
 
 class DeleteDocRequest(BaseModel):
@@ -94,21 +126,36 @@ class CreateEventRequest(BaseModel):
 
 @app.post("/calendar/create")
 async def create_event(request: Request) -> dict:
-    req = CreateEventRequest(**json.loads(await request.body()))
-    svc = _calendar_service()
-    body: dict[str, Any] = {
-        "summary": req.title,
-        "start": {"dateTime": req.start},
-        "end": {"dateTime": req.end},
-    }
-    if req.description:
-        body["description"] = req.description
-    attendees = req.attendees_list()
-    if attendees:
-        body["attendees"] = [{"email": e} for e in attendees]
+    try:
+        raw = await request.body()
+        logger.info("create_event raw body: %s", raw)
+        data = await request.json()
+        req = CreateEventRequest(**data)
+        svc = _calendar_service()
+        body: dict[str, Any] = {
+            "summary": req.title,
+            "start": {"dateTime": req.start, "timeZone": "UTC"},
+            "end": {"dateTime": req.end, "timeZone": "UTC"},
+        }
+        if req.description:
+            body["description"] = req.description
+        # Service accounts cannot invite attendees without Domain-Wide Delegation;
+        # store them in the description instead.
+        attendees = req.attendees_list()
+        if attendees:
+            attendees_str = ", ".join(attendees)
+            body["description"] = (body.get("description") or "") + f"\n\nAttendees: {attendees_str}"
 
-    event = svc.events().insert(calendarId="primary", body=body).execute()
-    return {"event_id": event["id"], "url": event.get("htmlLink", "")}
+        logger.info("Inserting calendar event: %s", body)
+        calendar_id = os.getenv("GOOGLE_CALENDAR_ID", "primary")
+        event = svc.events().insert(calendarId=calendar_id, body=body).execute()
+        return {"event_id": event["id"], "url": event.get("htmlLink", "")}
+    except googleapiclient.errors.HttpError as e:
+        logger.error("Google Calendar API error: %s", e)
+        return {"error": f"Google Calendar API error: {e}"}
+    except Exception as e:
+        logger.exception("Unexpected error in create_event")
+        return {"error": str(e)}
 
 
 class DeleteEventRequest(BaseModel):
@@ -118,8 +165,9 @@ class DeleteEventRequest(BaseModel):
 @app.post("/calendar/delete")
 async def delete_event(request: Request) -> dict:
     req = DeleteEventRequest(**json.loads(await request.body()))
+    calendar_id = os.getenv("GOOGLE_CALENDAR_ID", "primary")
     _calendar_service().events().delete(
-        calendarId="primary", eventId=req.event_id
+        calendarId=calendar_id, eventId=req.event_id
     ).execute()
     return {"deleted": req.event_id}
  

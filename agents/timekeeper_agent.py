@@ -6,12 +6,12 @@ from __future__ import annotations
 import os
 
 from google.adk.agents import Agent
-from google.adk.tools.mcp_tool import McpToolset, SseConnectionParams
+from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 
-MCP_URL = os.getenv("MCP_TOOLBOX_URL", "http://localhost:5000/mcp/sse")
+MCP_URL = os.getenv("MCP_TOOLBOX_URL", "http://localhost:5000/mcp")
 
 timekeeper_agent = Agent(
-    model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     name="timekeeper_agent",
     description=(
         "Schedules Google Calendar events from an ExtractedPlan. "
@@ -38,7 +38,7 @@ Do not add commentary. Do not call any other tool.
 """,
     tools=[
         McpToolset(
-            connection_params=SseConnectionParams(url=MCP_URL),
+            connection_params=StreamableHTTPConnectionParams(url=MCP_URL),
             tool_filter=["create_calendar_event"],
         )
     ],
