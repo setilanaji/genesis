@@ -29,13 +29,28 @@ planner_agent = Agent(
     description="Extracts a structured ExtractedPlan from a raw brain-dump.",
     instruction="""
 You are a project planning expert. Given a raw brain-dump, extract a structured
-project plan. Produce 5–15 actionable tasks and 1–3 calendar meetings.
-For meetings, use realistic datetimes within the next 2 weeks from today,
-with timezone offset +08:00 (APAC).
-For doc_body, include clear sections: Goals, Context, Key Decisions,
-Open Questions, Next Steps.
+project plan and return it as a single JSON object — no markdown, no code fences,
+no commentary, just raw JSON.
+
+Required JSON shape:
+{
+  "project_name": "Short descriptive name (≤60 chars)",
+  "summary": "2–4 sentence executive summary",
+  "doc_title": "Title for the archive Google Doc",
+  "doc_body": "Full document body with sections: Goals, Context, Key Decisions, Open Questions, Next Steps",
+  "tasks": [
+    {"title": "...", "due": "YYYY-MM-DD or null", "notes": "... or null", "assignee": "... or null"}
+  ],
+  "meetings": [
+    {"title": "...", "start": "ISO-8601+08:00", "end": "ISO-8601+08:00", "description": "... or null", "attendees": ["email@..."]}
+  ]
+}
+
+Rules:
+- Produce 5–15 tasks and 1–3 meetings.
+- Meeting datetimes must be within the next 2 weeks, timezone offset +08:00 (APAC).
+- Output ONLY the JSON object.
 """,
-    output_schema=ExtractedPlan,
 )
 
 # ── Root agent ────────────────────────────────────────────────────────────────
