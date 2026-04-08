@@ -16,7 +16,7 @@ from pydantic import BaseModel
 import google.auth
 import google.oauth2.credentials
 import google.oauth2.service_account
-from google.auth.transport.requests import Request
+from google.auth.transport.requests import Request as GoogleAuthRequest
 import googleapiclient.discovery
 import googleapiclient.errors
 
@@ -48,7 +48,7 @@ def _personal_creds():
             token_uri="https://oauth2.googleapis.com/token",
             scopes=DRIVE_SCOPES,
         )
-        creds.refresh(Request())
+        creds.refresh(GoogleAuthRequest())
         return creds
     except Exception as e:
         logger.warning("Personal ADC not found, falling back to default: %s", e)
